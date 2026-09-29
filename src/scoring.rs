@@ -3,7 +3,32 @@ use std::io::{BufRead, BufReader};
 
 use regex::Regex;
 
+/// Accepts text input representing a scoring system for fantasy Big Brother
+/// and attempts to parse it into a map of scoring events to scores. Wraps
+/// the output into a Result.
+///
+/// For instance, the line 'hoh_winner = 5' represents a rule awarding 5
+/// points to the houseguest that wins a head of household competition. This
+/// function would insert 'hoh_winner' as a key into the scoring map with its
+/// value set to the 5_i32.
+///
+/// Inputs
 /// path: Path to a scoring file mapping scoring event keys to their values
+///
+/// Outputs
+/// scoring: Result containing a HashMap of scoring event keys to scores 
+///
+/// Examples
+///
+/// ```
+/// use fantasy_big_brother::scoring::get_scoring;
+///
+/// let input = "test_event = 3";
+/// let scoring = get_scoring(input.as_bytes()).unwrap();
+/// assert_eq!(*scoring.get("test_event").unwrap(), 3);
+/// ```
+///
+/// 
 pub fn get_scoring(reader: impl BufRead) -> Result<HashMap<String, i32>, String> {
 
     let mut scoring = HashMap::new();
@@ -30,6 +55,8 @@ pub fn get_scoring(reader: impl BufRead) -> Result<HashMap<String, i32>, String>
     Ok(scoring)
 }
 
+/// Accepts a single line of text representing a scoring event within a scoring
+/// system for fantasy big brother and attempts to parse the score into an i32.
 fn get_score_value_from_line(line: &str) -> Result<i32, String> {
     let score_str = line.split("#").nth(0).ok_or(format!("Expected input line '{}' to have a value preceding any # character", line))?
         .split("=").nth(1).ok_or(format!("Expected input line '{}' to have a value following an = character", line))?
