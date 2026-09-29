@@ -1,6 +1,18 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
+/// Accepts a reader representing a textually defined houseguest roster
+/// for a game of fantasy big brother.
+///
+/// Examples
+///
+/// ```
+/// use fantasy_big_brother::roster::get_roster;
+///
+/// let roster_definition = "alice\nbob";
+/// let roster = get_roster(roster_definition.as_bytes()).unwrap();
+/// assert_eq!(roster, vec!["alice", "bob"]);
+/// ```
 pub fn get_roster(reader: impl BufRead) -> Result<Vec<String>, String> {
 
     let mut roster = Vec::new();
