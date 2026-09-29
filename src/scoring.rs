@@ -1,11 +1,11 @@
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader};
+use std::io::BufRead;
 
 use regex::Regex;
 
-/// Accepts text input representing a scoring system for fantasy Big Brother
-/// and attempts to parse it into a map of scoring events to scores. Wraps
-/// the output into a Result.
+/// Accepts a reader representing a textually defined scoring system for
+/// a game of fantasy Big Brother and attempts to parse it into a map of 
+/// scoring events to scores. Wraps the output into a Result.
 ///
 /// For instance, the line 'hoh_winner = 5' represents a rule awarding 5
 /// points to the houseguest that wins a head of household competition. This
@@ -28,14 +28,13 @@ use regex::Regex;
 /// assert_eq!(*scoring.get("test_event").unwrap(), 3);
 /// ```
 ///
-/// 
-pub fn get_scoring(reader: impl BufRead) -> Result<HashMap<String, i32>, String> {
+pub fn get_scoring(scoring_reader: impl BufRead) -> Result<HashMap<String, i32>, String> {
 
     let mut scoring = HashMap::new();
 
     let regex = r"[a-z_]+\s*=\s*-?\d+\s*#?";
     let regex = Regex::new(regex).unwrap();
-    for line in reader.lines() {
+    for line in scoring_reader.lines() {
         match line {
             Ok(line) if line.is_empty() => {},
             Ok(line) if regex.is_match(&line) => { 
@@ -55,6 +54,37 @@ pub fn get_scoring(reader: impl BufRead) -> Result<HashMap<String, i32>, String>
     Ok(scoring)
 }
 
+pub fn get_results(roster: &Vec<String>, scoring: &HashMap<String, i32>, results_reader: impl BufRead) -> Result<HashMap<String, i32>, String> {
+    let mut results: HashMap<String, i32> = roster.iter().map(|houseguest| (houseguest.clone(), 0)).collect();
+
+    let regex = r"[0-9]+,[a-z]+,[a-z_]+";
+    let regex = Regex::new(regex).unwrap();
+    for line in results_reader.lines() {
+        match line {
+            Ok(line) if line.is_empty() => {},
+            Ok(line) if regex.is_match(&line) => {
+                match parse_results_line(&line) {
+                    Ok((_episode, houseguest, scoring_event)) => { 
+                        let Some(current_score) = results.get(&houseguest) else {
+                            return Err(format!("Expected houseguest '{}' to be present in results map {:?}", houseguest, results));
+                        };
+
+                        let Some(scoring_event_value) = scoring.get(&scoring_event) else {
+                            return Err(format!("Expected scoring event '{}' to be present in scoring system map\n\n{:?}", scoring_event, scoring));
+                        };
+
+                        results.insert(houseguest, scoring_event_value + current_score);
+                    },
+                    Err(err) => { return Err(err); },
+                }
+            },
+            _ => {},
+        }
+    }
+
+    Ok(results)
+}
+
 /// Accepts a single line of text representing a scoring event within a scoring
 /// system for fantasy big brother and attempts to parse the score into an i32.
 fn get_score_value_from_line(line: &str) -> Result<i32, String> {
@@ -68,10 +98,33 @@ fn get_score_value_from_line(line: &str) -> Result<i32, String> {
     }
 }
 
+/// Accepts a single line of text representing a scoring event within a stream
+/// representing the results of a game of fantasy Big Brother and attempts to
+/// parse the episode, houseguest, and event.
+fn parse_results_line(line: &str) -> Result<(String, String, String), String> {
+    let mut tokens = line.split(",");
+
+    let Some(episode) = tokens.nth(0) else {
+        return Err(format!("Expected a episode to be parseable from the input line '{}' split into tokens '{:?}'", line, tokens));
+    };
+
+    let Some(houseguest) = tokens.nth(0) else {
+        return Err(format!("Expected a houseguest to be parseable from the input line '{}' split into tokens '{:?}'", line, tokens));
+    };
+
+    let Some(scoring_event) = tokens.nth(0) else {
+        return Err(format!("Expected a scoring event to be parseable from the input line '{}' split into tokens '{:?}'", line, tokens));
+    };
+
+    Ok((episode.to_string(), houseguest.to_string(), scoring_event.to_string()))
+}
+
 #[cfg(test)]
 mod tests {
 
     use super::*;
+
+    use std::io::BufReader;
 
     use rstest::rstest;
     use proptest::prelude::*;
@@ -88,7 +141,7 @@ mod tests {
         let scoring: HashMap<String, i32> = get_scoring(input.as_bytes())
             .expect(&format!("Expected get_scoring() to return Ok() for input '{}'", input));
         let actual = *scoring.get(event_key)
-            .expect(&format!("Expected the event key '{}' to be present in the scoring map: {:?}", event_key, scoring));
+            .expect(&format!("Expected the event key '{}' to be present in the scoring map\n\n{:?}", event_key, scoring));
 
         assert_eq!(expected, actual);
     }
@@ -106,15 +159,32 @@ mod tests {
         let scoring: HashMap<String, i32> = get_scoring(reader)
             .expect(&format!("Expected get_scoring() to return Ok() for input '{:?}'", input));
         let actual = *scoring.get(event_key)
-            .expect(&format!("Expected the event key '{}' to be present in the scoring map: {:?}", event_key, scoring));
+            .expect(&format!("Expected the event key '{}' to be present in the scoring map\n\n{:?}", event_key, scoring));
 
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn get_results_reports_correct_scores() {
+        let scoring_system_definition = "\ntest_win=3\ntest_loss=-1";
+        let scoring = get_scoring(scoring_system_definition.as_bytes())
+            .expect(&format!("Expected get_scoring() to successfully handle input text '{}'", scoring_system_definition));
+
+        let roster_definition = "alice\nbob";
+        let roster = crate::roster::get_roster(roster_definition.as_bytes())
+            .expect(&format!("Expected get_roster() to successfully handle input text '{}", roster_definition));
+
+        let results_definition = "1,alice,test_win\n1,bob,test_loss\n2,bob,test_win\n3,bob,test_loss";
+        let results = get_results(&roster, &scoring, results_definition.as_bytes())
+            .expect(&format!("Expected get_results() to successfully handle input roster '{:?}' scoring system '{:?}' and results text '{}'", roster, scoring, results_definition));
+        
+        assert_eq!(results, HashMap::from([("alice".to_string(), 3), ("bob".to_string(), 1)]));
     }
 
     proptest! {
         #[test]
         fn get_scoring_doesnt_crash(s in "\\PC*") {
-            get_scoring(s.as_bytes());
+            let _ = get_scoring(s.as_bytes());
         }
 
         #[test]

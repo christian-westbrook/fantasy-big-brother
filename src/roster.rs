@@ -1,5 +1,4 @@
-use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::BufRead;
 
 /// Accepts a reader representing a textually defined houseguest roster
 /// for a game of fantasy big brother.
@@ -14,7 +13,6 @@ use std::io::{BufRead, BufReader};
 /// assert_eq!(roster, vec!["alice", "bob"]);
 /// ```
 pub fn get_roster(reader: impl BufRead) -> Result<Vec<String>, String> {
-
     let mut roster = Vec::new();
 
     for line in reader.lines() {
