@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
 
-use big_brother::scoring::get_scoring;
-use big_brother::roster::get_roster;
+use fantasy_big_brother::scoring::get_scoring;
+use fantasy_big_brother::roster::get_roster;
 
 const SCORING_DATA_PATH: &str = "data/scoring.dat"; 
 
