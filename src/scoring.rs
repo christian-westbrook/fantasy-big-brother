@@ -54,8 +54,8 @@ pub fn get_scoring(scoring_reader: impl BufRead) -> Result<HashMap<String, i32>,
     Ok(scoring)
 }
 
-pub fn get_results(roster: &Vec<String>, scoring: &HashMap<String, i32>, results_reader: impl BufRead) -> Result<HashMap<String, i32>, String> {
-    let mut results: HashMap<String, i32> = roster.iter().map(|houseguest| (houseguest.clone(), 0)).collect();
+pub fn get_results(results_reader: impl BufRead) -> Result<Vec<(String, String, String)>, String> {
+    let mut results = Vec::new();
 
     let regex = r"[0-9]+,[a-z]+,[a-z_]+";
     let regex = Regex::new(regex).unwrap();
@@ -64,16 +64,8 @@ pub fn get_results(roster: &Vec<String>, scoring: &HashMap<String, i32>, results
             Ok(line) if line.is_empty() => {},
             Ok(line) if regex.is_match(&line) => {
                 match parse_results_line(&line) {
-                    Ok((_episode, houseguest, scoring_event)) => { 
-                        let Some(current_score) = results.get(&houseguest) else {
-                            return Err(format!("Expected houseguest '{}' to be present in results map {:?}", houseguest, results));
-                        };
-
-                        let Some(scoring_event_value) = scoring.get(&scoring_event) else {
-                            return Err(format!("Expected scoring event '{}' to be present in scoring system map\n\n{:?}", scoring_event, scoring));
-                        };
-
-                        results.insert(houseguest, scoring_event_value + current_score);
+                    Ok((episode, houseguest, scoring_event)) => { 
+                        results.push((episode, houseguest, scoring_event));
                     },
                     Err(err) => { return Err(err); },
                 }
@@ -165,20 +157,20 @@ mod tests {
     }
 
     #[test]
-    fn get_results_parses_scores_correctly() {
-        let scoring_system_definition = "\ntest_win=3\ntest_loss=-1";
-        let scoring = get_scoring(scoring_system_definition.as_bytes())
-            .expect(&format!("Expected get_scoring() to successfully handle input text '{}'", scoring_system_definition));
-
-        let roster_definition = "alice\nbob";
-        let roster = crate::roster::get_roster(roster_definition.as_bytes())
-            .expect(&format!("Expected get_roster() to successfully handle input text '{}", roster_definition));
-
+    fn get_results_parses_results_correctly() {
         let results_definition = "1,alice,test_win\n1,bob,test_loss\n2,bob,test_win\n3,bob,test_loss";
-        let results = get_results(&roster, &scoring, results_definition.as_bytes())
-            .expect(&format!("Expected get_results() to successfully handle input roster '{:?}' scoring system '{:?}' and results text '{}'", roster, scoring, results_definition));
-        
-        assert_eq!(results, HashMap::from([("alice".to_string(), 3), ("bob".to_string(), 1)]));
+        let results = get_results(results_definition.as_bytes())
+            .expect(&format!("Expected get_results() to successfully handle input results text '{}'", results_definition));
+    
+        assert_eq!(
+            results,
+            vec![
+                ("1".to_string(), "alice".to_string(), "test_win".to_string()),
+                ("1".to_string(), "bob".to_string(), "test_loss".to_string()),
+                ("2".to_string(), "bob".to_string(), "test_win".to_string()),
+                ("3".to_string(), "bob".to_string(), "test_loss".to_string()),
+            ]
+        );
     }
 
     proptest! {

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::io::BufRead;
 
-pub fn get_trades(trades_reader: impl BufRead) -> Result<HashMap<String, (String, String, String)>, String> {
+pub fn get_trades(trades_reader: impl BufRead) -> Result<HashMap<String, Vec<(String, String, String)>>, String> {
 
     let mut trades = HashMap::new();
 
@@ -12,7 +12,13 @@ pub fn get_trades(trades_reader: impl BufRead) -> Result<HashMap<String, (String
                 let (episode, game, player_one, player_two) = parse_trades_line(&line)
                     .expect(&format!("Unable to parse a line of the input trades text '{}'", line));
                 
-                trades.insert(episode, (game, player_one, player_two));
+                if !trades.contains_key(&episode) {
+                    trades.insert(episode.clone(), Vec::new());
+                }
+                
+                trades.get_mut(&episode)
+                    .expect(&format!("Expected the trades map to already contain the key {}", episode))
+                    .push((game, player_one, player_two));
             },
             _ => {},
         }
@@ -53,6 +59,6 @@ mod tests {
         let trades_definition = "5,family,angela,barret";
         let trades = get_trades(trades_definition.as_bytes())
             .expect(&format!("Expected get_trades() to successfully handle input text {}", trades_definition));
-        assert_eq!(*trades.get("5").unwrap(), ("family".to_string(), "angela".to_string(), "barret".to_string()))
+        assert_eq!(*trades.get("5").unwrap(), vec![("family".to_string(), "angela".to_string(), "barret".to_string())])
     }
 }
