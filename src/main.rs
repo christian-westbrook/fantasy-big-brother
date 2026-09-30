@@ -4,11 +4,13 @@ use std::io::BufReader;
 use fantasy_big_brother::roster::get_roster;
 use fantasy_big_brother::scoring::get_scoring;
 use fantasy_big_brother::scoring::get_results;
+use fantasy_big_brother::trades::get_trades;
 
 const ROSTER_DATA_PATH: &str = "data/roster.dat";
 const DRAFT_DATA_PATH: &str = "data/draft.dat";
 const SCORING_DATA_PATH: &str = "data/scoring.dat";
 const RESULTS_DATA_PATH: &str = "data/results.dat";
+const TRADES_DATA_PATH: &str = "data/trades.dat";
 
 fn main() {
     let roster_reader = get_buf_reader(ROSTER_DATA_PATH);
@@ -28,6 +30,10 @@ fn main() {
         .unwrap_or_else(|err| {
             panic!("Failed to parse results from the input results file {} given roster\n\n{:?}\n\nand scoring system\n\n{:?}\n\nError: {}", RESULTS_DATA_PATH, roster, scoring, err);
         });
+    
+    let trades_reader = get_buf_reader(TRADES_DATA_PATH);
+    let _trades = get_trades(trades_reader)
+        .expect(&format!("Failed to parse trades from the input trades file {}", TRADES_DATA_PATH));
 
     println!("{}", results.get("dee").unwrap());
 }

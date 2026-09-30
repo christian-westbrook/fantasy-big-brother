@@ -133,7 +133,7 @@ mod tests {
     #[case("\ntest_event = 3\n\n", "test_event", 3)]
     #[case("blergh=99\n\nblargh=27\n", "blargh", 27)]
     #[case("blergh=99\n\nblargh=27\n", "blergh", 99)]
-    fn scoring_events_are_loaded_accurately(
+    fn get_scoring_parses_scoring_correctly(
         #[case] input: &str,
         #[case] event_key: &str,
         #[case] expected: i32
@@ -165,7 +165,7 @@ mod tests {
     }
 
     #[test]
-    fn get_results_reports_correct_scores() {
+    fn get_results_parses_scores_correctly() {
         let scoring_system_definition = "\ntest_win=3\ntest_loss=-1";
         let scoring = get_scoring(scoring_system_definition.as_bytes())
             .expect(&format!("Expected get_scoring() to successfully handle input text '{}'", scoring_system_definition));
@@ -188,7 +188,7 @@ mod tests {
         }
 
         #[test]
-        fn scoring_events_are_loaded_accurately_proptest(
+        fn get_scoring_parses_scoring_correctly_proptest(
             event_key in "[a-z_]+",
             score in 0i32..i32::MAX
         ) {
