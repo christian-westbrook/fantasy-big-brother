@@ -6,13 +6,18 @@ use fantasy_big_brother::scoring::get_scoring;
 use fantasy_big_brother::scoring::get_results;
 
 const ROSTER_DATA_PATH: &str = "data/roster.dat";
+const DRAFT_DATA_PATH: &str = "data/draft.dat";
 const SCORING_DATA_PATH: &str = "data/scoring.dat";
-const RESULTS_DATA_PATH: &str = "data/results.dat"; 
+const RESULTS_DATA_PATH: &str = "data/results.dat";
 
 fn main() {
     let roster_reader = get_buf_reader(ROSTER_DATA_PATH);
     let roster = get_roster(roster_reader)
         .expect(&format!("Failed to parse a roster from the input roster file {}", ROSTER_DATA_PATH));
+        
+    let draft_reader = get_buf_reader(DRAFT_DATA_PATH);
+    let _draft = get_roster(draft_reader)
+        .expect(&format!("Failed to parse a draft from the input draft file {}", DRAFT_DATA_PATH));
 
     let scoring_reader = get_buf_reader(SCORING_DATA_PATH);
     let scoring = get_scoring(scoring_reader)

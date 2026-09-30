@@ -31,7 +31,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn get_roster_loads_correct_roster() {
+    fn get_roster_parses_correct_roster() {
         let roster_definition = "alice\nbob";
         let roster = get_roster(roster_definition.as_bytes())
             .expect(&format!("Expected get_roster() to succeed at parsing the input string '{}'", roster_definition));
